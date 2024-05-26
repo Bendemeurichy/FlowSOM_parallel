@@ -1,9 +1,10 @@
 import igraph as ig
 import numpy as np
+from quicksom.somax import SOM
 from scipy.spatial.distance import cdist, pdist, squareform
 from sklearn.utils.validation import check_is_fitted
 
-from . import SOM, BaseClusterEstimator, map_data_to_codes
+from . import BaseClusterEstimator, map_data_to_codes
 
 
 class SOMEstimator(BaseClusterEstimator):
