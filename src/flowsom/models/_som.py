@@ -86,7 +86,6 @@ def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=Non
 
 @jit(nopython=True, parallel=True)
 def map_data_to_codes(data, codes, distf=eucl):
-    counter = -1
     n_codes = codes.shape[0]
     nd = data.shape[0]
     nn_codes = np.zeros(nd)
@@ -99,7 +98,6 @@ def map_data_to_codes(data, codes, distf=eucl):
             if tmp < mindist:
                 mindist = tmp
                 minid = cd
-        counter += 1
-        nn_codes[counter] = minid
-        nn_dists[counter] = mindist
+        nn_codes[i] = minid
+        nn_dists[i] = mindist
     return nn_codes, nn_dists
