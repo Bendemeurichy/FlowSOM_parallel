@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import numpy as np
-from numba import jit
+from numba import jit, prange
 
 
 @jit(nopython=True, parallel=False)
@@ -39,6 +39,48 @@ def cosine(p1, p2, px, n, ncodes):
         denom2 += p2[j * ncodes] * p2[j * ncodes]
 
     return (-nom / (np.sqrt(denom1) * np.sqrt(denom2))) + 1
+
+
+# @jit(nopython=True, parallel=True)
+# def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
+#     if seed is not None:
+#         np.random.seed(seed)
+#
+#     n, px = data.shape
+#     niter = rlen * n
+#     threshold = radii[0]
+#     thresholdStep = (radii[0] - radii[1]) / niter
+#     change = 1.0
+#
+#     # Precompute distance matrix
+#     dist_matrix = np.zeros((n, ncodes))
+#     for i in range(n):
+#         for cd in range(ncodes):
+#             dist_matrix[i, cd] = distf(data[i, :], codes[cd, :])
+#
+#     for k in range(niter):
+#         if k % n == 0:
+#             if change < 1:
+#                 k = niter
+#             change = 0.0
+#
+#         i = np.random.randint(n)
+#         nearest = np.argmin(dist_matrix[i])  # Find nearest code
+#
+#         if threshold < 1.0:
+#             threshold = 0.5
+#         alpha = alphas[0] - (alphas[0] - alphas[1]) * k / niter
+#
+#         for cd in range(ncodes):
+#             if nhbrdist[cd, nearest] > threshold:
+#                 continue
+#
+#             tmp = data[i] - codes[cd]  # Vectorized calculation
+#             change += np.sum(np.abs(tmp))
+#             codes[cd] += tmp * alpha
+#
+#         threshold -= thresholdStep
+#     return codes
 
 
 @jit(nopython=True, parallel=True)
