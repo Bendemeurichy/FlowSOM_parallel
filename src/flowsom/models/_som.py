@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from numba import jit
+from numbasom import SOM as numbaSOM
 
 
 @jit(nopython=True, parallel=False)
@@ -40,53 +41,82 @@ def cosine(p1, p2, px, n, ncodes):
 
     return (-nom / (np.sqrt(denom1) * np.sqrt(denom2))) + 1
 
-
-@jit(nopython=True, parallel=True)
 def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
     if seed is not None:
         np.random.seed(seed)
-    xdists = np.zeros(ncodes)
+    # find the dimensions of the data
+    xdim = int(np.sqrt(ncodes))
+    ydim = xdim
     n = data.shape[0]
-    px = data.shape[1]
+    # calculate the number of iterations
     niter = rlen * n
+    # initialize the threshold
     threshold = radii[0]
+    # calculate the threshold step
     thresholdStep = (radii[0] - radii[1]) / niter
-    change = 1.0
 
-    for k in range(niter):
-        if k % n == 0:
-            if change < 1:
-                k = niter
-            change = 0.0
+    numbasom = numbaSOM(som_size=(xdim,ydim),is_torus=False)
+    prev_codes = None
+    for i in range(niter):
+        codes = numbasom.train(data, 1)  # Train for one iteration at a time
 
-        i = np.random.randint(n)
+        # Check for convergence
+        if prev_codes is not None:
+            avg_weight_change = np.mean(distf(codes - prev_codes, axis=-1))
+            if avg_weight_change < 0.001:  # Example threshold
+                print(f"Converged at iteration {i}")
+                break
 
-        nearest = 0
-        for cd in range(ncodes):
-            xdists[cd] = distf(data[i, :], codes[cd, :])
-            if xdists[cd] < xdists[nearest]:
-                nearest = cd
+        prev_codes = codes.copy()
 
-        if threshold < 1.0:
-            threshold = 0.5
-        alpha = alphas[0] - (alphas[0] - alphas[1]) * k / niter
-
-        for cd in range(ncodes):
-            if nhbrdist[cd, nearest] > threshold:
-                continue
-
-            for j in range(px):
-                tmp = data[i, j] - codes[cd, j]
-                change += abs(tmp)
-                codes[cd, j] += tmp * alpha
-
-        threshold -= thresholdStep
+    codes = codes.reshape((ncodes, data.shape[1]))
     return codes
+
+# @jit(nopython=True, parallel=True)
+# def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
+#     if seed is not None:
+#         np.random.seed(seed)
+#     xdists = np.zeros(ncodes)
+#     n = data.shape[0]
+#     px = data.shape[1]
+#     niter = rlen * n
+#     threshold = radii[0]
+#     thresholdStep = (radii[0] - radii[1]) / niter
+#     change = 1.0
+#
+#     for k in range(niter):
+#         if k % n == 0:
+#             if change < 1:
+#                 k = niter
+#             change = 0.0
+#
+#         i = np.random.randint(n)
+#
+#         nearest = 0
+#         for cd in range(ncodes):
+#             xdists[cd] = distf(data[i, :], codes[cd, :])
+#             if xdists[cd] < xdists[nearest]:
+#                 nearest = cd
+#
+#         if threshold < 1.0:
+#             threshold = 0.5
+#         alpha = alphas[0] - (alphas[0] - alphas[1]) * k / niter
+#
+#         for cd in range(ncodes):
+#             if nhbrdist[cd, nearest] > threshold:
+#                 continue
+#
+#             for j in range(px):
+#                 tmp = data[i, j] - codes[cd, j]
+#                 change += abs(tmp)
+#                 codes[cd, j] += tmp * alpha
+#
+#         threshold -= thresholdStep
+#     return codes
 
 
 @jit(nopython=True, parallel=True)
 def map_data_to_codes(data, codes, distf=eucl):
-    counter = -1
     n_codes = codes.shape[0]
     nd = data.shape[0]
     nn_codes = np.zeros(nd)
@@ -99,7 +129,6 @@ def map_data_to_codes(data, codes, distf=eucl):
             if tmp < mindist:
                 mindist = tmp
                 minid = cd
-        counter += 1
-        nn_codes[counter] = minid
-        nn_dists[counter] = mindist
+        nn_codes[i] = minid
+        nn_dists[i] = mindist
     return nn_codes, nn_dists
