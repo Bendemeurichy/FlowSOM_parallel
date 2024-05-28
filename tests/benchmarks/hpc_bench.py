@@ -30,14 +30,18 @@ def read_labelled_fcs(path, label_column=-1):
 
 
 def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1, cols_to_use: np.ndarray = None,
-               seed: int = None, variant: str = 'numba'):
+               seed: int = None, variant: str = 'numba', batch=False, batch_size=0):
     """
     Benchmark a file with the given implementation of flowsom, this includes time and v-measure score
     @param path: path to the fcs file
     @param flowsom_implementation: implementation of flowsom to use
     @param dimensions: number of dimensions to use
+    @param label_col: column to use as the column containing the labels
     @param cols_to_use: columns to use
     @param seed: random seed to use
+    @param variant: the version of the SOM algorithm to use, either 'numba','original', 'lr' or 'xpysom'
+    @param batch: if True, the batch version of the SOM algorithm will be used
+    @param batch_size: the batch size to use
     """
     # read in fcs file
     X, y = read_labelled_fcs(path, label_col)
@@ -50,13 +54,15 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     fsom = []
     exec_time = timeit.timeit(lambda: fsom.append(
         flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use)), xdim=10, ydim=10,
-                               cols_to_use=cols_to_use, seed=seed, variant=variant)), number=1)
+                               cols_to_use=cols_to_use, seed=seed, variant=variant, batch=batch,
+                               batch_size=batch_size)), number=1)
     y_pred = fsom[0].metacluster_labels
 
     # Measure peak memory usage
     peak_memory = max(memory_usage(proc=(
         lambda: flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use)), xdim=10, ydim=10,
-                                       cols_to_use=cols_to_use, seed=seed, variant=variant)), interval=0.1))
+                                       cols_to_use=cols_to_use, seed=seed, variant=variant, batch=batch,
+                                       batch_size=batch_size)), interval=0.1))
 
     # because the v_measure_score is independent of the absolute values of the labels
     # we don't need to make sure the predicted label values have the same value as the true labels
@@ -91,23 +97,41 @@ def accuracy_benchmarks():
     """Run the accuracy benchmarks for each FlowSOM implementation."""
     params = get_bench_params()
     with (open('./results/accuracy_numbsom.csv', 'w') as f1,
-          open('./results/accuracy_xpysom.csv', 'w') as f2):
+          open('./results/accuracy_xpysom.csv', 'w') as f2,
+          open('./results/accuracy_original.csv', 'w') as f3,
+          open('./results/accuracy_lr.csv', 'w') as f4):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
+        writer3 = csv.writer(f3)
+        writer4 = csv.writer(f4)
         for param in params:
             print(param[0])
             cols = np.arange(param[2], param[3])
             seed = np.random.randint(0, 100)
+            # TODO: add multiple passes (3?) for each implementation to get a better average
             writer1.writerow((param[0],
                               *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
                                           cols_to_use=cols, label_col=param[4], variant='numba', seed=seed)))
             writer2.writerow((param[0],
                               *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                                    cols_to_use=cols, label_col=param[4], variant='xpysom', seed=seed)))
+                                          cols_to_use=cols, label_col=param[4], variant='xpysom', seed=seed,
+                                          batch=True)))
+            writer3.writerow(
+                (param[0], *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
+                                       cols_to_use=cols, label_col=param[4], variant='original', seed=seed)))
+            writer4.writerow(
+                (param[0], *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
+                                       cols_to_use=cols, label_col=param[4], variant='lr', seed=seed)))
+
+
+# TODO: add speed benchmarks for the large dataset
+def speed_benchmarks():
+    print('implement me')
 
 
 def main():
-    print('implement me')
+    accuracy_benchmarks()
+    speed_benchmarks()
 
 
 if __name__ == '__main__':

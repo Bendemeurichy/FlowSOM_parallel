@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from os import cpu_count
 from typing import Literal
 
 import numpy as np
@@ -46,16 +47,19 @@ def cosine(p1, p2, px, n, ncodes):
 
 
 def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None,
-        version: Literal['numba', 'xpysom', 'original', 'lr'] = 'numba'):
+        version: Literal['numba', 'xpysom', 'original', 'lr'] = 'numba', batch=False,
+        batch_size=0):
     """SOM function used in som_estimator.py.
 
     Wrapper function to call either the numba or xpysom implementation of the SOM algorithm, used to train the SOM
     model.
     Can also call the original implementation of the SOM algorithm or the batch implementation of the SOM.
     :param data: The data to train the SOM model on
-    :param codes: The initial codes for the SOM model :
-    param nhbrdist: The neighbourhood distance :param alphas: The learning rates :param radii: The radii :
-    param ncodes: The number of codes
+    :param codes: The initial codes for the SOM model
+    :param nhbrdist: The neighbourhood distance
+    :param alphas: The learning rates
+    :param radii: The radii
+    :param ncodes: The number of codes
     :param rlen: The number of iterations
     :param distf: The distance function to use
     :param seed: The random seed to use
@@ -63,21 +67,28 @@ def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=Non
     :type version: Literal['numba', 'xpysom','original','lr'] Can be either 'numba', 'original',
         'lr'(original with different learning rate) or 'xpysom', defaults to 'numba'.
         Xpysom uses the batch implementation of the SOM algorithm.
+    :param batch: If True, the batch version of the SOM algorithm will be used
+    :param batch_size: The batch size to use
     :return: The trained SOM model.
     """
+    if batch and version != 'xpysom':
+        raise ValueError('Batch version of the SOM algorithm is only available in the xpysom implementation')
     if version == 'numba':
         return calculate_numbaSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
     elif version == 'xpysom':
-        return calculate_xpysom(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
+        if batch:
+            if batch_size == 0:
+                batch_size = data.shape[0]//cpu_count()
+        return calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed, batch_size)
     elif version == 'original':
-        return og_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
+        return calculate_originalSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
     elif version == 'lr':
         return lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
 
     raise ValueError('version should be either numba or xpysom')
 
 
-def calculate_xpysom(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
+def calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None, batch_size=0):
     """Calculate the SOM using the xpysom implementation.
 
     This code comes from the public GitHub repository https://github.com/Manciukic/xpysom by user Manciukic.
@@ -85,10 +96,17 @@ def calculate_xpysom(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=e
     """
     if seed is not None:
         np.random.seed(seed)
+
+    # check if batch is wanted
+    if batch_size == 0:
+        batch_size = data.shape[0]
     # find the dimensions of the data
     xdim = int(np.sqrt(ncodes))
     pysom = XPySom(xdim, xdim, data.shape[1], sigma=radii[0], sigmaN=radii[-1], learning_rate=alphas[0],
-                   learning_rateN=alphas[-1], random_seed=seed, xp=np)
+                   learning_rateN=alphas[-1], random_seed=seed, xp=np, n_parallel=batch_size)
+
+    # Add the codes as weights to the SOM, this could be from a previous MST run.
+    pysom._weights = codes.reshape((xdim, xdim, data.shape[1]))
     pysom.train(data, rlen, verbose=True)
     codes = pysom.get_weights()
 
@@ -111,6 +129,7 @@ def calculate_numbaSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf
 
     # create the numbaSOM object with a given size. most of the time, a 10x10 grid is used.
     numbasom = numbaSOM(som_size=(xdim, xdim), is_torus=False)
+
     lattice = numbasom.train(data, niter)
 
     # the lattice has to be reshaped to the shape (samples, dimensions)
@@ -119,7 +138,7 @@ def calculate_numbaSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf
 
 
 @jit(nopython=True, parallel=True)
-def og_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
+def calculate_originalSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
     if seed is not None:
         np.random.seed(seed)
     xdists = np.zeros(ncodes)
@@ -163,6 +182,7 @@ def og_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=
 
 @jit(nopython=True, parallel=True)
 def lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
+    #TODO : change to earlier implementation with cosine anealing learning decay
     if seed is not None:
         np.random.seed(seed)
     xdists = np.zeros(ncodes)

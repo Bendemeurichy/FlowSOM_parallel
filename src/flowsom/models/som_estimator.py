@@ -22,7 +22,9 @@ class SOMEstimator(BaseClusterEstimator):
         codes=None,
         importance=None,
         seed=None,
-        variant="numba"
+        variant="numba",
+        batch=False,
+        batch_size=0,
     ):
         super().__init__()
         self.xdim = xdim
@@ -37,6 +39,8 @@ class SOMEstimator(BaseClusterEstimator):
         self.importance = importance
         self.seed = seed
         self.variant = variant
+        self.batch = batch
+        self.batch_size = batch_size
 
     def fit(
         self,
@@ -59,7 +63,9 @@ class SOMEstimator(BaseClusterEstimator):
         :param variant: The version of the SOM algorithm to use, either 'numba','original', 'lr' or 'xpysom'
         :type variant: str
         :param batch: If True, the batch version of the SOM algorithm will be used
-
+        :type batch: bool
+        :param batch_size: The batch size to use
+        :type batch_size: int
         """
         codes = self.codes
         xdim = self.xdim
@@ -115,7 +121,9 @@ class SOMEstimator(BaseClusterEstimator):
                 ncodes=n_codes,
                 rlen=self.rlen,
                 seed=self.seed,
-                version=self.variant
+                version=self.variant,
+                batch=self.batch,
+                batch_size=self.batch_size
             )
             if mst != 1:
                 nhbrdist: list[list[int]] = _dist_mst(codes)
