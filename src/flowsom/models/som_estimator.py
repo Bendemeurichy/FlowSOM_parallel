@@ -22,6 +22,7 @@ class SOMEstimator(BaseClusterEstimator):
         codes=None,
         importance=None,
         seed=None,
+        variant="numba"
     ):
         super().__init__()
         self.xdim = xdim
@@ -35,6 +36,7 @@ class SOMEstimator(BaseClusterEstimator):
         self.codes = codes
         self.importance = importance
         self.seed = seed
+        self.variant = variant
 
     def fit(
         self,
@@ -54,6 +56,9 @@ class SOMEstimator(BaseClusterEstimator):
         :param importance: Array with numeric values. Parameters will be scaled
         according to importance
         :type importance: np.array
+        :param variant: The version of the SOM algorithm to use, either 'numba' or 'xpysom'
+        :type variant: str
+
         """
         codes = self.codes
         xdim = self.xdim
@@ -109,6 +114,7 @@ class SOMEstimator(BaseClusterEstimator):
                 ncodes=n_codes,
                 rlen=self.rlen,
                 seed=self.seed,
+                version=self.variant
             )
             if mst != 1:
                 nhbrdist: list[list[int]] = _dist_mst(codes)

@@ -30,7 +30,7 @@ def read_labelled_fcs(path,label_column=-1):
 
 
 def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1, cols_to_use: np.ndarray = None,
-               seed: int = None):
+               seed: int = None,variant:str='numba'):
     """
     Benchmark a file with the given implementation of flowsom, this includes time and v-measure score
     @param path: path to the fcs file
@@ -43,20 +43,20 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     X, y = read_labelled_fcs(path, label_col)
 
     # finding the best number of clusters is not part of this test
-    # here we use labelled data to find the number of unique labels
+    # here we use labeled data to find the number of unique labels
     n_clusters = np.unique(y).shape[0]
 
     # cluster data and predict labels
     fsom = []
     exec_time = timeit.timeit(lambda: fsom.append(
         flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use)), xdim=10, ydim=10,
-                               cols_to_use=cols_to_use, seed=seed)), number=1)
+                               cols_to_use=cols_to_use, seed=seed,variant=variant)), number=1)
     y_pred = fsom[0].metacluster_labels
 
     # Measure peak memory usage
     peak_memory = max(memory_usage(proc=(
         lambda: flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use)), xdim=10, ydim=10,
-                                       cols_to_use=cols_to_use, seed=seed)), interval=0.1))
+                                       cols_to_use=cols_to_use, seed=seed,variant=variant)), interval=0.1))
 
     # because the v_measure_score is independent of the absolute values of the labels
     # we don't need to make sure the predicted label values have the same value as the true labels
@@ -73,7 +73,13 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
 def main():
     path = "../data/accuracy_benches/Levine_13dim.fcs"
     cols = list(range(13))
-    bench_file(path, fs.FlowSOM, 13, cols_to_use=cols)
+    print("Levine_13dim.fcs")
+    bench_file(path, fs.FlowSOM, 13, cols_to_use=cols, variant='xpysom')
+    path = "../data/accuracy_benches/FlowCAP_ND.fcs"
+    cols = list(range(2,11))
+    print("FlowCAP_ND.fcs.fcs")
+    bench_file(path, fs.FlowSOM, 10, cols_to_use=cols, variant='xpysom',label_col=-2)
+    bench_file(path, fs.FlowSOM, 10, cols_to_use=cols, variant='numba',label_col=-2)
 
 if __name__ == '__main__':
     main()
