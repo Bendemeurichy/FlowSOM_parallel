@@ -71,19 +71,22 @@ def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=Non
     :param batch_size: The batch size to use
     :return: The trained SOM model.
     """
-    if batch and version != 'xpysom':
+    if batch and not (version == 'xpysom' or version == 'batchsom'):
         raise ValueError('Batch version of the SOM algorithm is only available in the xpysom implementation')
     if version == 'numba':
         return calculate_numbaSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
     elif version == 'xpysom':
-        if batch:
-            if batch_size == 0:
-                batch_size = data.shape[0]//cpu_count()
+        if batch and batch_size == 0:
+            batch_size = data.shape[0] // cpu_count()
         return calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed, batch_size)
     elif version == 'original':
         return calculate_originalSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
     elif version == 'lr':
         return lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
+    elif version == 'batchsom':
+        if batch_size == 0:
+            batch_size = data.shape[0] // cpu_count()
+        return calculate_batchSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed, batch_size)
 
     raise ValueError('version should be either numba or xpysom')
 
@@ -93,6 +96,10 @@ def calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=e
 
     This code comes from the public GitHub repository https://github.com/Manciukic/xpysom by user Manciukic.
     The parameters are the same as the SOM function in this file.
+    You could use a different distance function.
+    Since
+    they don't really work for the original SOM implementation,
+    I have used the standard euclidian distance function.
     """
     if seed is not None:
         np.random.seed(seed)
@@ -180,9 +187,67 @@ def calculate_originalSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, di
     return codes
 
 
+def calculate_batchSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None, batch_size=0):
+    """Calculate the batch SOM.
+
+    This is my personal implementation of the batch SOM algorithm.
+    It is based on this article:
+    https://medium.com/kirey-group/self-organizing-maps-with-fast-ai-step-1-implementing-a-som-with-pytorch-80df2216ede3
+    The parameters are the same as the calculate_xpySOM function in this file.
+    """
+    # Initialize parameters
+    m, n = int(np.ceil(np.sqrt(ncodes))), int(np.ceil(np.sqrt(ncodes)))
+    dim = data.shape[1]  # Assuming all data have the same dimensionality
+    weights = np.random.rand(m, n, dim)
+    neighborhood_radius = radii[0]
+    learning_rate = alphas[0]
+    if seed is not None:
+        np.random.seed(seed)
+
+    @jit(nopython=True, parallel=True)
+    def find_bmu(t):
+        bmu_idx = np.array([0, 0], dtype=np.int32)
+        min_dist = np.inf
+        for x in range(weights.shape[0]):
+            for y in range(weights.shape[1]):
+                w = weights[x, y, :]
+                sq_dist = distf(w, t)
+                if sq_dist < min_dist:
+                    min_dist = sq_dist
+                    bmu_idx = np.array([x, y], dtype=np.int32)
+        return bmu_idx
+
+    @jit(nopython=True, parallel=True)
+    def update_weights(batch_avg, bmu_idx):
+        for x in range(weights.shape[0]):
+            for y in range(weights.shape[1]):
+                w = weights[x, y, :]
+                w_dist = distf(bmu_idx, np.array([x, y], dtype=np.int32))
+                if w_dist <= neighborhood_radius:
+                    influence = np.exp(-(w_dist ** 2) / (2 * neighborhood_radius ** 2))
+                    new_w = w + (learning_rate * influence * (batch_avg - w))
+                    weights[x, y, :] = new_w
+
+    # Split data into batches
+    data_batches = np.array_split(data, len(data) // batch_size)
+
+    # Train the SOM with the data in batches
+    for _epoch in range(len(alphas)):
+        for batch in data_batches:
+            avg_data = np.mean(batch, axis=0)
+            for d in batch:
+                bmu_idx = find_bmu(d)
+                update_weights(avg_data, bmu_idx)
+        # Update learning rate and radius after each epoch
+        learning_rate *= 0.9
+        neighborhood_radius *= 0.9
+
+    return weights
+
+
+
 @jit(nopython=True, parallel=True)
 def lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
-    #TODO : change to earlier implementation with cosine anealing learning decay
     if seed is not None:
         np.random.seed(seed)
     xdists = np.zeros(ncodes)
@@ -192,6 +257,8 @@ def lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=
     threshold = radii[0]
     thresholdStep = (radii[0] - radii[1]) / niter
     change = 1.0
+    start_lrate = alphas[0]
+    end_lrate = alphas[1]
 
     for k in range(niter):
         if k % n == 0:
@@ -209,8 +276,8 @@ def lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=
 
         if threshold < 1.0:
             threshold = 0.5
-        alpha = alphas[0] - (alphas[0] - alphas[1]) * k / niter
 
+        alpha = end_lrate + 0.5 * (start_lrate - end_lrate) * (1 + np.cos(np.pi * k / niter))
         for cd in range(ncodes):
             if nhbrdist[cd, nearest] > threshold:
                 continue

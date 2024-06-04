@@ -22,7 +22,7 @@ class SOMEstimator(BaseClusterEstimator):
         codes=None,
         importance=None,
         seed=None,
-        variant="numba",
+        variant="xpysom",
         batch=False,
         batch_size=0,
     ):

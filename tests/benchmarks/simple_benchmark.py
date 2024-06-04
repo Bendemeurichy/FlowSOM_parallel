@@ -74,7 +74,7 @@ def main():
     path = "../data/accuracy_benches/Levine_13dim.fcs"
     cols = list(range(13))
     print("Levine_13dim.fcs")
-    bench_file(path, fs.FlowSOM, 13, cols_to_use=cols, variant='xpysom',batch=True)
+    bench_file(path, fs.FlowSOM, 13, cols_to_use=cols, variant='batchsom',batch=True)
     # path = "../data/accuracy_benches/FlowCAP_ND.fcs"
     # cols = list(range(2,11))
     # print("FlowCAP_ND.fcs.fcs")
