@@ -72,14 +72,13 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
 
 def main():
     path = "../data/accuracy_benches/Levine_13dim.fcs"
-    cols = list(range(13))
-    print("Levine_13dim.fcs")
-    bench_file(path, fs.FlowSOM, 13, cols_to_use=cols, variant='batchsom',batch=True)
+    cols = list(range(0,13))
+    print("Levine_32dim.fcs")
+    bench_file(path, fs.FlowSOM, 10, label_col=-1, cols_to_use=cols, variant='my_batch',batch=True)
     # path = "../data/accuracy_benches/FlowCAP_ND.fcs"
     # cols = list(range(2,11))
     # print("FlowCAP_ND.fcs.fcs")
-    # bench_file(path, fs.FlowSOM, 10, cols_to_use=cols, variant='xpysom',label_col=-2)
-    # bench_file(path, fs.FlowSOM, 10, cols_to_use=cols, variant='numba',label_col=-2)
+    # bench_file(path, fs.FlowSOM, 10, cols_to_use=cols, variant='xpysom',label_col=-2,batch=True)
 
 if __name__ == '__main__':
     main()

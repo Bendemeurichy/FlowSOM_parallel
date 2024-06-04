@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# Base URL
+BASE_URL="https://dl01.irc.ugent.be/flow/FlowRepository_FR-FCM-ZYX9/"
+
+# download files to directory
+DOWNLOAD_DIR="$VSC_DATA/performance_benches"
+
+# Temporary file to store URLs
+TMP_FILE="urls_to_download.txt"
+
+# Remove existing TMP_FILE
+rm -f $TMP_FILE
+
+# Step 1: Identify URLs
+wget --spider -r -np -nH --cut-dirs=3 -R *.csv $BASE_URL | grep -oP '(?<=^.*?)[^ ]*' | head -n $total_files > $TMP_FILE
+
+# Calculate n as 1/4th of total_files
+n=$((total_files / 4))
+
+# Select the first n files
+sed -n "${start},${end}p" $TMP_FILE > $TMP_FILE
+
+# Step 2: Download selected files to the custom directory
+while read url; do wget -P $DOWNLOAD_DIR "$url"; done < $TMP_FILE
+
+# Clean up
+rm -f $TMP_FILE

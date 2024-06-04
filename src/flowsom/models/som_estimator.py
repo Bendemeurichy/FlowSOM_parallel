@@ -106,9 +106,9 @@ class SOMEstimator(BaseClusterEstimator):
             alpha = [alpha]
         else:
             radius = np.linspace(radius[0], radius[1], num=mst + 1)
-            radius = [tuple(radius[i : i + 2]) for i in range(mst)]
+            radius = [tuple(radius[i: i + 2]) for i in range(mst)]
             alpha = np.linspace(alpha[0], alpha[1], num=mst + 1)
-            alpha = [tuple(alpha[i : i + 2]) for i in range(mst)]
+            alpha = [tuple(alpha[i: i + 2]) for i in range(mst)]
 
         # Compute the SOM
         for i in range(mst):
