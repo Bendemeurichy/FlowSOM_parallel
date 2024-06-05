@@ -51,13 +51,22 @@ ff = fs.io.read_FCS("./tests/data/ff.fcs")
 
 # Run the FlowSOM algorithm
 fsom = fs.FlowSOM(
-    ff, cols_to_use=[8, 11, 13, 14, 15, 16, 17], xdim=10, ydim=10, n_clusters=10, seed=42
+    ff, cols_to_use=[8, 11, 13, 14, 15, 16, 17], xdim=10, ydim=10, n_clusters=10, seed=42 ,
+    variant='xpysom', batch=True, batch_size=1000
 )
 
 # Plot the FlowSOM results
 p = fs.pl.plot_stars(fsom, background_values=fsom.get_cluster_data().obs.metaclustering)
 p.show()
 ```
+
+The FlowSOM class supports multiple implementations of the training algorithm.
+Currently, the following variants are supported:
+- 'original': The original version implemented by the [saeyslab](https://github.com/saeyslab/FlowSOM_Python?tab=readme-ov-file).
+- 'numba': Implementation using the numbasom at [numbasom](https://github.com/nmarincic/numbasom/tree/master/?tab=readme-ov-file). This version does not support all the extra parameters but is faster than the original.
+- 'xpysom' (default): Implementation using the [xpysom](https://github.com/Manciukic/xpysom) library. Performs better, scores quite similarly to the original implementation and supports batches. It also supports all the original parameters.
+- 'lr': The original implementation but it uses cosine anealing for learning rate decay instead of linear decay.
+- 'batch_som': Batch implementation of the original SOM training function.
 
 ## Release notes
 

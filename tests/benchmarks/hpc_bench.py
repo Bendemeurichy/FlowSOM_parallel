@@ -56,8 +56,8 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     # cluster data and predict labels
     fsom = []
     exec_time = timeit.timeit(lambda: fsom.append(
-        flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use)), xdim=10, ydim=10,
-                               cols_to_use=cols_to_use, seed=seed, variant=variant, batch=batch,
+        flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use else 0),
+                               xdim=10, ydim=10, cols_to_use=cols_to_use, seed=seed, variant=variant, batch=batch,
                                batch_size=batch_size)), number=1)
     y_pred = fsom[0].metacluster_labels
 
@@ -105,7 +105,7 @@ def accuracy_benchmarks(logger):
           open('./results/accuracy_xpysom.csv', 'w') as f2,
           open('./results/accuracy_original.csv', 'w') as f3,
           open('./results/accuracy_lr.csv', 'w') as f4,
-          open('./results/accuracy_my_batch.csv', 'w') as f5):
+          open('./results/accuracy_batch_som.csv', 'w') as f5):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3)
@@ -136,19 +136,19 @@ def accuracy_benchmarks(logger):
                 logger.info(f"Running learnig rate benchmarks for {param[0]} iteration {i}/10")
                 writer5.writerow(
                     (param[0], *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant='my_batch', seed=seed,
+                                           cols_to_use=cols, label_col=param[4], variant='batch_som', seed=seed,
                                            batch=True)))
                 logger.info(f"Running my batch benchmarks for {param[0]} iteration {i}/10")
 
 
 def speed_benchmarks(logger):
     logger.info("Running performance benchmarks")
-    files = os.listdir('$VSC_DATA/data/performance_benches')
+    files = os.listdir('$VSC_DATA/performance_benches')
     logger.info(f"Found {len(files)} files")
     logger.info("Aggregating flowframes")
     cell_count = 0
     for file in files:
-        f = FlowData(f'../data/performance_benches/{file}')
+        f = FlowData(f'$VSC_DATA/performance_benches/{file}')
         cell_count += f.event_count
 
     frame = aggregate_flowframes(files, cell_count)
@@ -157,7 +157,7 @@ def speed_benchmarks(logger):
           open('./results/performance_xpysom.csv', 'w') as f2,
           open('./results/performance_original.csv', 'w') as f3,
           open('./results/performance_lr.csv', 'w') as f4,
-          open('./results/performance_my_batch.csv', 'w') as f5):
+          open('./results/performance_batch_som.csv', 'w') as f5):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3)
@@ -178,7 +178,7 @@ def speed_benchmarks(logger):
             writer4.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='lr', seed=seed))
             logger.log(f"Finished lr benchmarks iteration {i}/10")
 
-            writer5.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='my_batch', seed=seed, batch=True))
+            writer5.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='batch_som', seed=seed, batch=True))
             logger.log(f"Finished my batch benchmarks iteration {i}/10")
 
 

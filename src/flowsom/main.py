@@ -35,6 +35,9 @@ class FlowSOM:
         alpha: tuple[float, float] = (0.05, 0.01),
         seed: int | None = None,
         mad_allowed=4,
+        variant: str = "xpysom",
+        batch: bool = False,
+        batch_size: int = 0,
         **kwargs,
     ):
         """Initialize the FlowSOM AnnData object.
@@ -50,6 +53,9 @@ class FlowSOM:
         :param cols_to_use: The columns to use for clustering
         :param mad_allowed: Number of median absolute deviations allowed
         :param model: The model to use
+        :param variant: The variant of the FlowSOM training function to use.
+        :param batch: Whether to use batch training or not.
+        :param batch_size: The batch size to use.
         :param kwargs: Additional keyword arguments. See documentation of the cluster_model and metacluster_model for more information.
         :type kwargs: dict
         """
@@ -73,6 +79,9 @@ class FlowSOM:
             alpha=alpha,
             seed=seed,
             n_clusters=n_clusters,
+            variant=variant,
+            batch=batch,
+            batch_size=batch_size,
             **kwargs,
         )
         self.mudata = MuData(

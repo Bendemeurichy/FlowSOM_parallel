@@ -60,7 +60,7 @@ class SOMEstimator(BaseClusterEstimator):
         :param importance: Array with numeric values. Parameters will be scaled
         according to importance
         :type importance: np.array
-        :param variant: The version of the SOM algorithm to use, either 'numba','original', 'lr' or 'xpysom'
+        :param variant: The version of the SOM algorithm to use, either 'numba','original', 'lr', 'xpysom' or 'batch_som'
         :type variant: str
         :param batch: If True, the batch version of the SOM algorithm will be used
         :type batch: bool

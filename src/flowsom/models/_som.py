@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from os import cpu_count
-from typing import Literal
+from typing import Callable, Literal
 
 import numpy as np
 from numba import jit, prange
@@ -46,49 +46,58 @@ def cosine(p1, p2, px, n, ncodes):
     return (-nom / (np.sqrt(denom1) * np.sqrt(denom2))) + 1
 
 
-def SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None,
-        version: Literal['numba', 'xpysom', 'original', 'lr'] = 'numba', batch=False,
-        batch_size=0):
+def SOM(data: np.ndarray, codes: np.ndarray, nhbrdist: np.ndarray, alphas: np.ndarray, radii: np.ndarray,
+        ncodes : int, rlen : int, distf: Callable = eucl, seed: int = None,
+        version: Literal['numba', 'xpysom', 'original', 'lr', 'batch_som'] = 'xpysom', batch: bool = True,
+        batch_size: int = 0) -> np.ndarray:
     """SOM function used in som_estimator.py.
 
-    Wrapper function to call either the numba or xpysom implementation of the SOM algorithm, used to train the SOM
+    Wrapper function to call one of the implementations of the SOM algorithm, used to train the SOM
     model.
-    Can also call the original implementation of the SOM algorithm or the batch implementation of the SOM.
-    :param data: The data to train the SOM model on
-    :param codes: The initial codes for the SOM model
-    :param nhbrdist: The neighbourhood distance
-    :param alphas: The learning rates
-    :param radii: The radii
-    :param ncodes: The number of codes
-    :param rlen: The number of iterations
-    :param distf: The distance function to use
-    :param seed: The random seed to use
+    Can also call the original implementation of the SOM algorithm.
+    Supports batched training with xpySOM and batch_som versions of the SOM algorithm.
+    The following implementations are supported:
+    - numba: The numbaSOM implementation
+    - xpysom: The xpysom implementation
+    - original: The original implementation of the SOM algorithm
+    - lr: The original implementation of the SOM algorithm with a learning rate that uses cosine annealing
+    - batch_som: My implementation of the batched SOM algorithm
+
+    :param data: The data to train the SOM model on.
+    :param codes: The initial codes for the SOM model.
+    :param nhbrdist: The neighbourhood distance.
+    :param alphas: The learning rates.
+    :param radii: The radii.
+    :param ncodes: The number of codes.
+    :param rlen: The number of iterations.
+    :param distf: The distance function to use.
+    :param seed: The random seed to use.
     :param version: The version of the SOM algorithm to use
-    :type version: Literal['numba', 'xpysom','original','lr'] Can be either 'numba', 'original',
-        'lr'(original with different learning rate) or 'xpysom', defaults to 'numba'.
+    :type version: Literal['numba', 'xpysom','original','lr','batch_som'] Can be either 'numba', 'original',
+        'lr'(original with different learning rate), 'batch_som' or 'xpysom', defaults to 'xpysom'.
         Xpysom uses the batch implementation of the SOM algorithm.
     :param batch: If True, the batch version of the SOM algorithm will be used
-    :param batch_size: The batch size to use
+    :param batch_size: The batch size to use.
     :return: The trained SOM model.
     """
-    if batch and not (version == 'xpysom' or version == 'my_batch'):
-        raise ValueError('Batch version of the SOM algorithm is only available in the xpysom implementation')
+    if batch and not (version == 'batch_som' or version == 'xpysom' ):
+        raise ValueError('Batch training of the SOM is not available for this version.')
     if version == 'numba':
         return calculate_numbaSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
     elif version == 'xpysom':
         if batch and batch_size == 0:
-            batch_size = data.shape[0] // cpu_count()
+            batch_size = data.shape[0] // (2 * cpu_count())
         return calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed, batch_size)
     elif version == 'original':
         return calculate_originalSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
     elif version == 'lr':
         return lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf, seed)
-    elif version == 'my_batch':
+    elif version == 'batch_som':
         if batch_size == 0:
             batch_size = data.shape[0] // cpu_count()
         return calculate_SOM_batch(data, codes, nhbrdist, alphas, radii, ncodes, rlen, batch_size, distf, seed)
 
-    raise ValueError('version should be either numba or xpysom')
+    raise ValueError('Choose a valid version of the SOM algorithm. Options are: numba, xpysom, original, lr, batch_som.')
 
 
 def calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None, batch_size=0):
@@ -96,9 +105,8 @@ def calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=e
 
     This code comes from the public GitHub repository https://github.com/Manciukic/xpysom by user Manciukic.
     The parameters are the same as the SOM function in this file.
-    You could use a different distance function.
-    Since
-    they don't really work for the original SOM implementation,
+    You could use a different distance function on the xpySOM class.
+    Since they don't really work for the original SOM implementation,
     I have used the standard euclidian distance function.
     """
     if seed is not None:
@@ -126,6 +134,7 @@ def calculate_numbaSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf
 
     This code comes from the public GitHub repository https://github.com/nmarincic/numbasom by user nmarincic.
     The parameters are the same as the SOM function in this file.
+    The numbaSOM implementation is a bit faster than the original implementation but offers less flexibility.
     """
     if seed is not None:
         np.random.seed(seed)
@@ -189,9 +198,17 @@ def calculate_originalSOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, di
 
 
 @jit(nopython=True, parallel=True)
-def calculate_SOM_batch(data, codes, nhbrdist, alphas, radii, ncodes, rlen, batch_size=1, distf=eucl, seed=None):
+def calculate_SOM_batch(data, codes, nhbrdist, alphas, radii, ncodes, rlen, batch_size=0, distf=eucl, seed=None):
+    """My implementation of the batched SOM training algorithm.
+
+    This implementation is based on the original SOM algorithm, but with batch training.
+    It uses an additional parameter, batch_size, to specify the number of data points to use in each iteration.
+    """
     if seed is not None:
         np.random.seed(seed)
+
+    if batch_size == 0:
+        batch_size = data.shape[0]
 
     n = data.shape[0]
     px = data.shape[1]
@@ -224,6 +241,7 @@ def calculate_SOM_batch(data, codes, nhbrdist, alphas, radii, ncodes, rlen, batc
                 if nhbrdist[cd, nearest] > threshold:
                     continue
 
+                # Accumulate updates for the Best Matching Unit
                 bmu_counts[cd] += 1
                 for j in range(px):
                     updates[cd, j] += (batch_data[i, j] - codes[cd, j])
@@ -248,6 +266,12 @@ def calculate_SOM_batch(data, codes, nhbrdist, alphas, radii, ncodes, rlen, batc
 
 @jit(nopython=True, parallel=True)
 def lr_SOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=eucl, seed=None):
+    """Implementation of the SOM algorithm with a learning rate that uses cosine annealing.
+
+    This implementation is based on the original SOM algorithm, but with a learning rate that uses cosine annealing.
+    The function uses the same parameters as the SOM function in this file.
+    It could converge faster than the original SOM algorithm because of the steeper learning rate decay.
+    """
     if seed is not None:
         np.random.seed(seed)
     xdists = np.zeros(ncodes)
