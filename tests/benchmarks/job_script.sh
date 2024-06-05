@@ -22,7 +22,7 @@ source venv_joltik/bin/activate
 
 
 # Start script
-cd $PBS_O_WORKDIR
+cd $PBS_O_WORKDIR/project/tests/benchmarks
 
 rm -rf "$VSC_DATA/output_flowsom"
 

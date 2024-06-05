@@ -101,11 +101,11 @@ def accuracy_benchmarks(logger):
     """Run the accuracy benchmarks for each FlowSOM implementation."""
     logging.basicConfig(level=logging.INFO)
     params = get_bench_params()
-    with (open('./results/accuracy_numbsom.csv', 'w') as f1,
-          open('./results/accuracy_xpysom.csv', 'w') as f2,
-          open('./results/accuracy_original.csv', 'w') as f3,
-          open('./results/accuracy_lr.csv', 'w') as f4,
-          open('./results/accuracy_batch_som.csv', 'w') as f5):
+    with (open('$VSC_DATA/output_flowsom/accuracy_numbsom.csv', 'w') as f1,
+          open('$VSC_DATA/output_flowsom/accuracy_xpysom.csv', 'w') as f2,
+          open('$VSC_DATA/output_flowsom/accuracy_original.csv', 'w') as f3,
+          open('$VSC_DATA/output_flowsom/accuracy_lr.csv', 'w') as f4,
+          open('$VSC_DATA/output_flowsom/accuracy_batch_som.csv', 'w') as f5):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3)
@@ -153,11 +153,11 @@ def speed_benchmarks(logger):
 
     frame = aggregate_flowframes(files, cell_count)
 
-    with (open('./results/performance_numbsom.csv', 'w') as f1,
-          open('./results/performance_xpysom.csv', 'w') as f2,
-          open('./results/performance_original.csv', 'w') as f3,
-          open('./results/performance_lr.csv', 'w') as f4,
-          open('./results/performance_batch_som.csv', 'w') as f5):
+    with (open('$VSC_DATA/output_flowsom/performance_numbsom.csv', 'w') as f1,
+          open('$VSC_DATA/output_flowsom/performance_xpysom.csv', 'w') as f2,
+          open('$VSC_DATA/output_flowsom/performance_original.csv', 'w') as f3,
+          open('$VSC_DATA/output_flowsom/performance_lr.csv', 'w') as f4,
+          open('$VSC_DATA/output_flowsom/performance_batch_som.csv', 'w') as f5):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3)

@@ -68,6 +68,10 @@ Currently, the following variants are supported:
 - 'lr': The original implementation but it uses cosine anealing for learning rate decay instead of linear decay.
 - 'batch_som': Batch implementation of the original SOM training function.
 
+Batch training is supported for the 'xpysom' and 'batch_som' variants.
+The batch implementation can be enabled by setting the `batch` parameter to `True`.
+The `batch_size` parameter can be used to specify the size of the batches if needed, the default for this is `#cells // cpu_core_count`.
+
 ## Release notes
 
 See the [changelog][changelog].
