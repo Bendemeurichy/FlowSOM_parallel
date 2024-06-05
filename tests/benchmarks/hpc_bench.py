@@ -56,7 +56,8 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     # cluster data and predict labels
     fsom = []
     exec_time = timeit.timeit(lambda: fsom.append(
-        flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use is not None else 0),
+        flowsom_implementation(X, n_clusters=max(n_clusters, dimensions,
+                                                 len(cols_to_use) if cols_to_use is not None else 0),
                                xdim=10, ydim=10, cols_to_use=cols_to_use, seed=seed, variant=variant, batch=batch,
                                batch_size=batch_size)), number=1)
     y_pred = fsom[0].metacluster_labels
@@ -64,7 +65,8 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     # Measure peak memory usage
     peak_memory = max(memory_usage(proc=(
         lambda: flowsom_implementation(X,
-                                       n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use is not None else 0),
+                                       n_clusters=max(n_clusters, dimensions,
+                                                      len(cols_to_use) if cols_to_use is not None else 0),
                                        xdim=10, ydim=10, cols_to_use=cols_to_use, seed=seed, variant=variant,
                                        batch=batch, batch_size=batch_size)), interval=0.1))
 
@@ -77,6 +79,13 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     print(f"V-measure score: {v_measure}")
     print(f"Execution time: {exec_time}s")
     print(f"Peak memory usage: {peak_memory:.2f} MiB")
+    logging.info(f"--------------------------------------------------------------------------------\n"
+                 f"File: {path}\n"
+                 f"variant: {variant}\n"
+                 f"V-measure score: {v_measure}\n"
+                 f"Execution time: {exec_time}s\n"
+                 f"Peak memory usage: {peak_memory:.2f} MiB\n"
+                 f"--------------------------------------------------------------------------------\n")
     return v_measure, exec_time, peak_memory
 
 
@@ -100,7 +109,7 @@ def get_bench_params() -> list[tuple]:
 def accuracy_benchmarks():
     """Run the accuracy benchmarks for each FlowSOM implementation."""
     params = get_bench_params()
-    with (open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_numbsom.csv", "w") as f1,
+    with (open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_numbasom.csv", "w") as f1,
           open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_xpysom.csv", "w") as f2,
           open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_original.csv", "w") as f3,
           open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_lr.csv", "w") as f4,
@@ -119,28 +128,33 @@ def accuracy_benchmarks():
                 logging.info(f"Running benchmarks for {path}")
                 cols = list(range(param[2], param[3]))
                 seed = np.random.randint(0, 100)
-                writer1.writerow((param[0],
-                                  *bench_file(path, fs.FlowSOM, dimensions=param[1],
-                                              cols_to_use=cols, label_col=param[4], variant="numba", seed=seed)))
-                logging.info(f"Running numbasom benchmarks for {param[0]} iteration {i}/10")
-                writer2.writerow((param[0],
-                                  *bench_file(path, fs.FlowSOM, dimensions=param[1],
-                                              cols_to_use=cols, label_col=param[4], variant="xpysom", seed=seed,
-                                              batch=True)))
+                logging.info(f'Running numbasom benchmarks for {param[0]} iteration {i}/10')
+                numbasom = bench_file(path, fs.FlowSOM, dimensions=param[1],cols_to_use=cols, label_col=param[4],
+                                      variant="numba", seed=seed)
+                writer1.writerow((param[0], *numbasom))
+                logging.info(f"Finished numbasom benchmarks for {param[0]} iteration {i}/10")
                 logging.info(f"Running xpysom benchmarks for {param[0]} iteration {i}/10")
-                writer3.writerow(
-                    (param[0], *bench_file(path, fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant="original", seed=seed)))
+                xpySOM = bench_file(path, fs.FlowSOM, dimensions=param[1],cols_to_use=cols, label_col=param[4],
+                                    variant="xpysom", seed=seed, batch=True)
+                writer2.writerow((param[0], *xpySOM))
+                logging.info(f"Finished xpysom benchmarks for {param[0]} iteration {i}/10")
                 logging.info(f"Running original benchmarks for {param[0]} iteration {i}/10")
+                original = bench_file(path, fs.FlowSOM, dimensions=param[1],cols_to_use=cols, label_col=param[4],
+                                      variant="original", seed=seed)
+                writer3.writerow((param[0], *original))
+                logging.info(f"Finished original benchmarks for {param[0]} iteration {i}/10")
+                logging.info(f"Running learning rate benchmarks for {param[0]} iteration {i}/10")
+                learning_rate = bench_file(path, fs.FlowSOM, dimensions=param[1],
+                           cols_to_use=cols, label_col=param[4], variant="lr", seed=seed)
                 writer4.writerow(
-                    (param[0], *bench_file(path, fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant="lr", seed=seed)))
-                logging.info(f"Running learnig rate benchmarks for {param[0]} iteration {i}/10")
-                writer5.writerow(
-                    (param[0], *bench_file(path, fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant="batch_som", seed=seed,
-                                           batch=True)))
+                    (param[0], *learning_rate))
+                logging.info(f"Finished learnig rate benchmarks for {param[0]} iteration {i}/10")
                 logging.info(f"Running my batch benchmarks for {param[0]} iteration {i}/10")
+                my_batch =bench_file(path, fs.FlowSOM, dimensions=param[1], cols_to_use=cols,
+                                     label_col=param[4], variant="batch_som", seed=seed, batch=True)
+                writer5.writerow(
+                    (param[0], *my_batch))
+                logging.info(f"Finished my batch benchmarks for {param[0]} iteration {i}/10")
 
 
 def speed_benchmarks():
@@ -185,8 +199,8 @@ def speed_benchmarks():
 
 
 def main():
-    logging.basicConfig(level=logging.INFO,filename='app.log', filemode='w',
-                        format='%(name)s - %(levelname)s - %(message)s')
+    logging.basicConfig(level=logging.INFO, filename='app.log', filemode='w',
+                        format='%(name)s - %(message)s')
 
     accuracy_benchmarks()
     speed_benchmarks()

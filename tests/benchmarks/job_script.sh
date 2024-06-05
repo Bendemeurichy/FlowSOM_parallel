@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #PBS -N flowsom_benchmarks           ## job name
-#PBS -l nodes=1:ppn=4               ## 1 nodes, 4 cores per node
-#PBS -l walltime=1:00:00            ## max. 6h of wall time
-#PBS -l mem=16gb                    ## 32GB of memory
+#PBS -l nodes=1:ppn=16               ## 1 nodes, 4 cores per node
+#PBS -l walltime=6:00:00            ## max. 6h of wall time
+#PBS -l mem=32gb                    ## 32GB of memory
 #PBS -m abe                         ## send mail on abort, begin and end
 
 PIP_DIR="$VSC_SCRATCH/site-packages" # directory to install packages

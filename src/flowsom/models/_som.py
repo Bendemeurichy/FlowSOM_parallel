@@ -122,7 +122,7 @@ def calculate_xpySOM(data, codes, nhbrdist, alphas, radii, ncodes, rlen, distf=e
 
     # Add the codes as weights to the SOM, this could be from a previous MST run.
     pysom._weights = codes.reshape((xdim, xdim, data.shape[1]))
-    pysom.train(data, rlen, verbose=True)
+    pysom.train(data, rlen)
 
     codes = pysom.get_weights()
 
