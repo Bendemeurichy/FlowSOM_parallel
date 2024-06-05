@@ -33,7 +33,7 @@ def read_labelled_fcs(path, label_column=-1):
 
 
 def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1, cols_to_use: np.ndarray = None,
-               seed: int = None, variant: str = 'numba', batch=False, batch_size=0):
+               seed: int = None, variant: str = "umba", batch=False, batch_size=0):
     """
     Benchmark a file with the given implementation of flowsom, this includes time and v-measure score
     @param path: path to the fcs file
@@ -42,7 +42,7 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     @param label_col: column to use as the column containing the labels
     @param cols_to_use: columns to use
     @param seed: random seed to use
-    @param variant: the version of the SOM algorithm to use, either 'numba','original', 'lr' or 'xpysom'
+    @param variant: the version of the SOM algorithm to use, either "numba","original", "lr" or "xpysom"
     @param batch: if True, the batch version of the SOM algorithm will be used
     @param batch_size: the batch size to use
     """
@@ -56,7 +56,7 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     # cluster data and predict labels
     fsom = []
     exec_time = timeit.timeit(lambda: fsom.append(
-        flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use else 0),
+        flowsom_implementation(X, n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use is not None else 0),
                                xdim=10, ydim=10, cols_to_use=cols_to_use, seed=seed, variant=variant, batch=batch,
                                batch_size=batch_size)), number=1)
     y_pred = fsom[0].metacluster_labels
@@ -64,18 +64,18 @@ def bench_file(path: str, flowsom_implementation, dimensions: int, label_col=-1,
     # Measure peak memory usage
     peak_memory = max(memory_usage(proc=(
         lambda: flowsom_implementation(X,
-                                       n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use else 0),
+                                       n_clusters=max(n_clusters, dimensions, len(cols_to_use) if cols_to_use is not None else 0),
                                        xdim=10, ydim=10, cols_to_use=cols_to_use, seed=seed, variant=variant,
                                        batch=batch, batch_size=batch_size)), interval=0.1))
 
     # because the v_measure_score is independent of the absolute values of the labels
-    # we don't need to make sure the predicted label values have the same value as the true labels
+    # we don"t need to make sure the predicted label values have the same value as the true labels
     # the v_measure_score will be the same regardless, as it only depends on homogeneity and completeness
     # alternatively, a lookup table from the cluster centers can be used to have a consistent label value mapping
     # https://stackoverflow.com/questions/44888415/how-to-set-k-means-clustering-labels-from-highest-to-lowest-with-python
     v_measure = v_measure_score(y, y_pred)
     print(f"V-measure score: {v_measure}")
-    print(f'Execution time: {exec_time}s')
+    print(f"Execution time: {exec_time}s")
     print(f"Peak memory usage: {peak_memory:.2f} MiB")
     return v_measure, exec_time, peak_memory
 
@@ -90,104 +90,107 @@ def get_bench_params() -> list[tuple]:
     - Label column: The column to use as label
     """
     params = []
-    with open('./metadata_accuracy_bench.csv') as meta_csv:
-        csv_reader = csv.reader(meta_csv, delimiter=',')
+    with open("./metadata_accuracy_bench.csv") as meta_csv:
+        csv_reader = csv.reader(meta_csv, delimiter=",")
         for row in csv_reader:
-            params.append((row[0], int(row[1]), int(row[2]), int(row[3]), int(row[4]), row[5]))
+            params.append((row[0], int(row[1]), int(row[2]), int(row[3]), int(row[4])))
     return params
 
 
-def accuracy_benchmarks(logger):
+def accuracy_benchmarks():
     """Run the accuracy benchmarks for each FlowSOM implementation."""
-    logging.basicConfig(level=logging.INFO)
     params = get_bench_params()
-    with (open('$VSC_DATA/output_flowsom/accuracy_numbsom.csv', 'w') as f1,
-          open('$VSC_DATA/output_flowsom/accuracy_xpysom.csv', 'w') as f2,
-          open('$VSC_DATA/output_flowsom/accuracy_original.csv', 'w') as f3,
-          open('$VSC_DATA/output_flowsom/accuracy_lr.csv', 'w') as f4,
-          open('$VSC_DATA/output_flowsom/accuracy_batch_som.csv', 'w') as f5):
+    with (open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_numbsom.csv", "w") as f1,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_xpysom.csv", "w") as f2,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_original.csv", "w") as f3,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_lr.csv", "w") as f4,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/accuracy_batch_som.csv", "w") as f5):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3)
         writer4 = csv.writer(f4)
         writer5 = csv.writer(f5)
+        logging.info("Running accuracy benchmarks")
         for param in params:
-            logger.info(f"Running accuracy benchmarks for {param[0]}")
+            logging.info(f"Running accuracy benchmarks for {param[0]}")
             for i in range(10):
-                logger.info(f"Running accuracy benchmarks for {param[0]} iteration {i}/10")
-                cols = np.arange(param[2], param[3])
+                logging.info(f"Running accuracy benchmarks for {param[0]} iteration {i}/10")
+                path = f"../data/accuracy_benches/{param[0]}"
+                logging.info(f"Running benchmarks for {path}")
+                cols = list(range(param[2], param[3]))
                 seed = np.random.randint(0, 100)
                 writer1.writerow((param[0],
-                                  *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                              cols_to_use=cols, label_col=param[4], variant='numba', seed=seed)))
-                logger.info(f"Running numbasom benchmarks for {param[0]} iteration {i}/10")
+                                  *bench_file(path, fs.FlowSOM, dimensions=param[1],
+                                              cols_to_use=cols, label_col=param[4], variant="numba", seed=seed)))
+                logging.info(f"Running numbasom benchmarks for {param[0]} iteration {i}/10")
                 writer2.writerow((param[0],
-                                  *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                              cols_to_use=cols, label_col=param[4], variant='xpysom', seed=seed,
+                                  *bench_file(path, fs.FlowSOM, dimensions=param[1],
+                                              cols_to_use=cols, label_col=param[4], variant="xpysom", seed=seed,
                                               batch=True)))
-                logger.info(f"Running xpysom benchmarks for {param[0]} iteration {i}/10")
+                logging.info(f"Running xpysom benchmarks for {param[0]} iteration {i}/10")
                 writer3.writerow(
-                    (param[0], *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant='original', seed=seed)))
-                logger.info(f"Running original benchmarks for {param[0]} iteration {i}/10")
+                    (param[0], *bench_file(path, fs.FlowSOM, dimensions=param[1],
+                                           cols_to_use=cols, label_col=param[4], variant="original", seed=seed)))
+                logging.info(f"Running original benchmarks for {param[0]} iteration {i}/10")
                 writer4.writerow(
-                    (param[0], *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant='lr', seed=seed)))
-                logger.info(f"Running learnig rate benchmarks for {param[0]} iteration {i}/10")
+                    (param[0], *bench_file(path, fs.FlowSOM, dimensions=param[1],
+                                           cols_to_use=cols, label_col=param[4], variant="lr", seed=seed)))
+                logging.info(f"Running learnig rate benchmarks for {param[0]} iteration {i}/10")
                 writer5.writerow(
-                    (param[0], *bench_file(f"../data/accuracy_benches/{param[0]}", fs.FlowSOM, dimensions=param[1],
-                                           cols_to_use=cols, label_col=param[4], variant='batch_som', seed=seed,
+                    (param[0], *bench_file(path, fs.FlowSOM, dimensions=param[1],
+                                           cols_to_use=cols, label_col=param[4], variant="batch_som", seed=seed,
                                            batch=True)))
-                logger.info(f"Running my batch benchmarks for {param[0]} iteration {i}/10")
+                logging.info(f"Running my batch benchmarks for {param[0]} iteration {i}/10")
 
 
-def speed_benchmarks(logger):
-    logger.info("Running performance benchmarks")
-    files = os.listdir('$VSC_DATA/performance_benches')
-    logger.info(f"Found {len(files)} files")
-    logger.info("Aggregating flowframes")
+def speed_benchmarks():
+    logging.info("Running performance benchmarks")
+    files = os.listdir(f"{os.environ['VSC_DATA']}/performance_benches")
+    logging.info(f"Found {len(files)} files")
+    logging.info("Aggregating flowframes")
     cell_count = 0
     for file in files:
-        f = FlowData(f'$VSC_DATA/performance_benches/{file}')
+        f = FlowData(f"{os.environ['VSC_DATA']}/performance_benches/{file}")
         cell_count += f.event_count
 
     frame = aggregate_flowframes(files, cell_count)
 
-    with (open('$VSC_DATA/output_flowsom/performance_numbsom.csv', 'w') as f1,
-          open('$VSC_DATA/output_flowsom/performance_xpysom.csv', 'w') as f2,
-          open('$VSC_DATA/output_flowsom/performance_original.csv', 'w') as f3,
-          open('$VSC_DATA/output_flowsom/performance_lr.csv', 'w') as f4,
-          open('$VSC_DATA/output_flowsom/performance_batch_som.csv', 'w') as f5):
+    with (open(f"{os.environ['VSC_DATA']}/output_flowsom/performance_numbsom.csv", "w") as f1,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/performance_xpysom.csv", "w") as f2,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/performance_original.csv", "w") as f3,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/performance_lr.csv", "w") as f4,
+          open(f"{os.environ['VSC_DATA']}/output_flowsom/performance_batch_som.csv", "w") as f5):
         writer1 = csv.writer(f1)
         writer2 = csv.writer(f2)
         writer3 = csv.writer(f3)
         writer4 = csv.writer(f4)
         writer5 = csv.writer(f5)
         for i in range(10):
-            logger.info(f"Running performance benchmarks iteration {i}/10")
+            logging.info(f"Running performance benchmarks iteration {i}/10")
             seed = np.random.randint(0, 100)
-            writer1.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='numba', seed=seed))
-            logger.log(f"Finished numbasom benchmarks iteration {i}/10")
+            writer1.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant="numba", seed=seed))
+            logging.info(f"Finished numbasom benchmarks iteration {i}/10")
 
-            writer2.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='xpysom', seed=seed, batch=True))
-            logger.log(f"Finished xpysom benchmarks iteration {i}/10")
+            writer2.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant="xpysom", seed=seed, batch=True))
+            logging.info(f"Finished xpysom benchmarks iteration {i}/10")
 
-            writer3.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='original', seed=seed))
-            logger.log(f"Finished original benchmarks iteration {i}/10")
+            writer3.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant="original", seed=seed))
+            logging.info(f"Finished original benchmarks iteration {i}/10")
 
-            writer4.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='lr', seed=seed))
-            logger.log(f"Finished lr benchmarks iteration {i}/10")
+            writer4.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant="lr", seed=seed))
+            logging.info(f"Finished lr benchmarks iteration {i}/10")
 
-            writer5.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant='batch_som', seed=seed, batch=True))
-            logger.log(f"Finished my batch benchmarks iteration {i}/10")
+            writer5.writerow(bench_file(frame, fs.FlowSOM, dimensions=40, variant="batch_som", seed=seed, batch=True))
+            logging.info(f"Finished my batch benchmarks iteration {i}/10")
 
 
 def main():
-    logger = logging.getLogger(__name__)
-    logger.setLevel(logging.INFO)
-    accuracy_benchmarks(logger)
-    speed_benchmarks(logger)
+    logging.basicConfig(level=logging.INFO,filename='app.log', filemode='w',
+                        format='%(name)s - %(levelname)s - %(message)s')
+
+    accuracy_benchmarks()
+    speed_benchmarks()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -82,11 +82,20 @@ For questions and help requests or if you found a bug, please use the [issue tra
 
 ## Citation
 
+### FlowSOM:
 If you use `FlowSOM` in your work, please cite the following papers:
 
 > A. Couckuyt, B. Rombaut, Y. Saeys, and S. Van Gassen, “Efficient cytometry analysis with FlowSOM in Python boosts interoperability with other single-cell tools,” Bioinformatics, vol. 40, no. 4, p. btae179, Apr. 2024, doi: [10.1093/bioinformatics/btae179](https://doi.org/10.1093/bioinformatics/btae179).
 
 > S. Van Gassen et al., “FlowSOM: Using self-organizing maps for visualization and interpretation of cytometry data,” Cytometry Part A, vol. 87, no. 7, pp. 636–645, 2015, doi: [10.1002/cyto.a.22625](https://doi.org/10.1002/cyto.a.22625).
+
+
+## Extra libraries used in the implementation of FlowSOM:
+### XPYSOM:
+> M. Manciu, “xpysom: XPySom is a minimalistic implementation of the Self Organizing Maps (SOM).” 2021, doi: [xpysom](https://github.com/Manciukic/xpysom).
+
+### NUMBASOM:
+> N. Marincic, “numbasom: A fast Self-Organizing Map Python library implemented in Numba.,” 2021, doi: [numbasom](https://github.com/nmarincic/numbasom/tree/master/?tab=readme-ov-file).
 
 [issue-tracker]: https://github.com/saeyslab/FlowSOM_Python/issues
 [changelog]: https://flowsom.readthedocs.io/en/latest/changelog.html

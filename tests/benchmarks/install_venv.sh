@@ -11,8 +11,8 @@
 #
 # zorgt ervoor dat de variabele $cluster de waarde "donphan" bevat.
 
-# We laden Python 3.10 in als module
-module load Python/3.10.4-GCCcore-11.3.0
+# We laden Python 3.11 in als module
+module load SciPy-bundle/2023.11-gfbf-2023b
 
 # Navigeren naar de map "demo" in de Data directory
 PIP_DIR="$VSC_SCRATCH/site-packages" # directory to install packages
@@ -39,5 +39,5 @@ fi
 # https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/#using-requirements-files
 python3 -m venv $VENV_NAME
 source $VENV_NAME/bin/activate
-cd $VSC_HOME/project
-pip install --upgrade -t "$PIP_DIR" --cache-dir="$CACHE_DIR/pip" -e .
+pip install --upgrade -e $VSC_HOME/project
+
