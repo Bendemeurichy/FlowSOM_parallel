@@ -8,7 +8,7 @@
 [badge-docs]: https://img.shields.io/readthedocs/flowsom
 
 The complete FlowSOM package known from R, now available in Python!
-
+Edited by @BenDeMeurichy to support parallel execution trough XPYSOM.
 ## Getting started
 
 Please refer to the [documentation][link-docs]. In particular, the following resources are available:
@@ -24,6 +24,7 @@ Python installed, we recommend installing [Mambaforge](https://github.com/conda-
 
 There are several alternative options to install FlowSOM:
 
+original package:
 <!--
 1) Install the latest release of `FlowSOM` from `PyPI <https://pypi.org/project/FlowSOM/>`_:
 
@@ -33,9 +34,13 @@ pip install FlowSOM
 -->
 
 1. Install the latest development version:
-
+- original version:
 ```bash
 pip install git+https://github.com/saeyslab/FlowSOM_Python
+```
+- parallel version: 
+```bash
+pip install git+https://github.com/Bendemeurichy/FlowSOM_parallel
 ```
 
 ## Usage
