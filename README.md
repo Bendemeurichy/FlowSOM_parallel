@@ -8,7 +8,9 @@
 [badge-docs]: https://img.shields.io/readthedocs/flowsom
 
 The complete FlowSOM package known from R, now available in Python!
+
 Edited by @BenDeMeurichy to support parallel execution trough XPYSOM.
+
 ## Getting started
 
 Please refer to the [documentation][link-docs]. In particular, the following resources are available:
